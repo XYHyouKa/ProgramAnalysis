@@ -1,0 +1,90 @@
+package com.xyhyouka.sootbasic;
+
+import soot.ArrayType;
+import soot.Local;
+import soot.Modifier;
+import soot.Printer;
+import soot.RefType;
+import soot.Scene;
+import soot.SootClass;
+import soot.SootMethod;
+import soot.SourceLocator;
+import soot.Type;
+import soot.Unit;
+import soot.VoidType;
+import soot.baf.BafASMBackend;
+import soot.jimple.JasminClass;
+import soot.jimple.Jimple;
+import soot.jimple.JimpleBody;
+import soot.jimple.StringConstant;
+import soot.options.Options;
+import soot.tagkit.GenericAttribute;
+import soot.util.Chain;
+import soot.util.JasminOutputStream;
+
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.util.Arrays;
+
+/**
+ * attribute_info {
+ *     u2 attribute_name_index;
+ *     u4 attribute_length;
+ *     u1 info[attribute_length];
+ * }
+ */
+
+public class AddAttributesBasic {
+
+    public static void main(String[] args) throws IOException {
+
+        String cp = System.getProperty("java.class.path");
+        String fSeparator = System.getProperty("file.separator");
+        String pSeparator = System.getProperty("path.separator");
+        String projPath = System.getProperty("user.dir");
+
+        cp = projPath + fSeparator + "sootOutput" + pSeparator + cp;
+        Options.v().set_soot_classpath(cp);
+
+        SootClass sClass = null;
+        try {
+            sClass = Scene.v().loadClassAndSupport("HelloWorld");
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println(System.getProperty("user.dir"));
+            System.out.println("Make sure the path above is your SootBasic project root path");
+            System.out.println("and SootBasic/sootOutput/HelloWorld.class exists.");
+        }
+
+        // create and add the class attribute, with data "foo"
+        GenericAttribute classAttr = new GenericAttribute(
+                "ca.mcgill.sable.MyClassAttr",
+                "foo".getBytes());
+        sClass.addTag(classAttr);
+
+        // Create and add the method attribute with no data
+        SootMethod sMethod = sClass.getMethod("main",
+                Arrays.asList(new Type[] {ArrayType.v(RefType.v("java.lang.String"), 1)}),
+                VoidType.v());
+        sMethod.setActiveBody(sClass.get);
+        GenericAttribute mAttr = new GenericAttribute(
+                "ca.mcgill.sable.MyMethodAttr",
+                "".getBytes());
+        sMethod.addTag(mAttr);
+
+        // Options.v().set_java_version(Options.java_version_8);
+        Options.v().set_output_dir("sootOutput" + fSeparator + "addAttributesBasic");
+        String fileName = SourceLocator.v().getFileNameFor(sClass, Options.output_format_class);
+//        int idx = fileName.lastIndexOf(fSeparator);
+//        String newFileName = fileName.substring(0, idx + 1) + "addAttributesBasic" + fileName.substring(idx);
+        OutputStream streamOut = new JasminOutputStream(new FileOutputStream(fileName));
+        PrintWriter writerOut = new PrintWriter(new OutputStreamWriter(streamOut));
+        JasminClass jasminClass = new soot.jimple.JasminClass(sClass);
+        jasminClass.print(writerOut);
+        writerOut.flush();
+        streamOut.close();
+    }
+}
